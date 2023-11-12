@@ -8,7 +8,7 @@ This research seeks to address this gap by leveraging clinical data collected at
 
 The following packages were used in this analysis: 
 
- - Data Manipulation: `tidyverse` \ 
+ - Data Manipulation: `tidyverse` 
  - Table Formatting: `gtsummary`, `knitr`
  - Data Visualization: `corrplot`, `ggplot2`
  - Multiple Imputation: `mice`
