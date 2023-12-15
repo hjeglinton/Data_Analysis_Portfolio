@@ -25,7 +25,7 @@ library(pROC)
 # Read in and process data 
 df <- read.csv("project2.csv") %>%
   distinct() %>%
-  select(-c(record_id, hosp_dc_ga, Death, mat_race)) %>%
+  select(-c(record_id, Death, mat_race)) %>%
   mutate_at(c("center", "mat_ethn", "del_method", "prenat_ster", 
               "com_prenat_ster", "mat_chorio", "gender", "sga", "any_surf", 
               "ventilation_support_level.36", "med_ph.36", 
@@ -35,6 +35,9 @@ df <- read.csv("project2.csv") %>%
 # Define ventilation support levels
 levels(df$ventilation_support_level.36) <- c("None", "NIPPV", "IPPV")
 levels(df$ventilation_support_level_modified.44) <- c("None", "NIPPV", "IPPV")
+
+# Code com_prenat_ster as "No" when prenat_ster is "No" (instead of NA)
+df$com_prenat_ster[df$prenat_ster == "No"] <- "No"
 
 # Fill in missing 'center' values (based on patient ID)
 df$center[is.na(df$center)] <- 1
@@ -71,6 +74,7 @@ df_eda <- df %>%
          `PIP (44 Weeks)` = p_delta.44, 
          `PEEP (44 Weeks)` = peep_cm_h2o_modified.44,
          `Medication for Pulmonary Hypertension (44 Weeks)` = med_ph.44,
+         `Hospital Discharge Gestational Age` = hosp_dc_ga,
          `Tracheostomy` = Trach) %>%
   select(-center)
 
@@ -85,7 +89,7 @@ df_eda <- df %>%
 
 **Results:** The prevalence of tracheostomy was 15%. Respiratory support level, prenatal corticosteroids, and their interactions emerged as significant predictors. The 44-week model outperformed the 36-week model, showcasing the importance of respiratory parameters closer to discharge. Prenatal corticosteroids were associated with an increased tracheostomy risk.
 
-**Conclusion:** Prenatal corticosteroids, respiratory support level, fraction of inspired oxygen, and medication for pulmonary hypertension were selected as predictors of tracheostomy. However, class imbalance and small sample size necessitate cautious interpretation. Future research should validate these models in larger, diverse cohorts, addressing these limitations for enhanced generalizability.
+**Conclusion:** Prenatal corticosteroids, respiratory support level, fraction of inspired oxygen, and medication for pulmonary hypertension were selected as predictors of tracheostomy. However, class imbalance and small sample size necessitate cautious interpretation. Future research should validate these models in larger, diverse cohorts for enhanced generalizability.
 
 
 # Introduction
@@ -115,11 +119,11 @@ Data collected at the 36 week and 44 week PMA timepoints included weight, ventil
 
 The birth weight, gestational age, length, and head circumference were highly correlated, with pairwise correlations between 0.68 and 0.84 (Figure 1). To avoid multicolinearity in our model, we chose to include only birth weight since it was the most highly related to tracheostomy (p = 0.004) and had no missing data. The SGA indicator was also included to capture the relationship between size and gestational age at birth.
 
-The dataset included both a binary indicator of whether prenatal corticosteroids were taken as well as an indicator of whether a complete course of corticosteroids was taken. We have chosen to include only the former, as the latter had a high prevalence of missing data (19.4%, Table 1) and was not associated with tracheostomy (p > 0.9). 
+The dataset included both a binary indicator of whether prenatal corticosteroids were taken as well as an indicator of whether a complete course of corticosteroids was taken. We have chosen to include only the former, as the latter had a higher prevalence of missing data (7.1% vs. 3.5%, Table 1) and was less associated with tracheostomy (p = 0.2 vs. p = 0.011). 
 
 Information on the mother's ethnicity was also collected. We have chosen to exclude this from the model derivation, as it does not have a biological basis and its inclusion could potentially lead to discrimination if the model returns different results depending on ethnicity. Since tracheostomy status was not significantly associated with ethnicity (p = 0.3), excluding this variable is unlikely to introduce bias. 
 
-There was a high prevalence of missing data for whether the infants received surfactant within the first 72 hours (43.5%, Table 1). Since this variable was not highly associated with the outcome (p = 0.14), it was excluded from the model. Thus, the birth variables included as candidates in model selection were birth weight, SGA, prenatal corticosteroids, delivery method, maternal chorioamnionitis, and sex assigned at birth. 
+There was a high prevalence of missing data for whether the infants received surfactant within the first 72 hours (43.5%, Table 1), making imputation of these data difficult. Since this variable was not highly associated with the outcome (p = 0.14), it was excluded from the model. Thus, the birth variables included as candidates in model selection were birth weight, SGA, prenatal corticosteroids, delivery method, maternal chorioamnionitis, and sex assigned at birth. 
 
 
 #### $\text{ }$ Figure 1. Correlation Between Continuous Covariates
@@ -145,26 +149,59 @@ corrplot(cor_mat, method = "square", type = "lower", diag = FALSE,
 
 Variables collected at 36 and 44 weeks PMA included weight, ventilation support level, fraction of inspired oxygen (FiO2), peak inspiratory pressure (PIP), positive and inspiratory pressure (PEEP), and whether the infant was medicated for pulmonary hypertension. Since all of these variables were highly associated with tracheostomy (p < 0.001) and had only moderate pairwise correlations (between r = -0.09 and r = 0.57), we decided to include all as candidates in the model.
 
-There were large proportions of missing data for each variable collected at the 44 week timepoint (Table 1). Although these had high proportions of missing data, the fact that each variable was also collected at 36 weeks indicates that multiple imputation may accurately predict values at 44 weeks. We thus used multiple imputation to fill in these values -- however, due to this close relationship between 36 and 44 week variables, we did not fit both timepoints in the same models. Instead, we fit separate models for the 36 week data and the 44 week data. Clinicians can then choose which model to use based on the data that they have available. 
-
-
-### Center
-
-The data were collected from ten centers, some of which were referral hospitals with a higher proportion of sick infants. To account for the difference in center characteristics while retaining the transportability of the model, we included the centers as a random intercept in mixed-effects models rather than as a fixed effect. 
+While Table 1 reports the missing data for the entire study population, Table 2 reports the missing data among the subjects that were discharged after 44 weeks PMA. There were generally larger proportions of missing data for each variable collected at the 44 week timepoint compared to the 36 week timepoint. Due to this close relationship between 36 and 44 week variables and the different populations (discharged after 36 weeks vs. discharged after 44 weeks), we did not fit both timepoints in the same model. Instead, we fit separate models for the 36 week data and the 44 week data. Clinicians can then choose which model to use based on the data that they have available. 
 
 
 ```{r Table: Missing Data}
-# Create table with prevalence of missing data
-data.frame(variable = names(colMeans(is.na(df_eda))), 
-           perc_missing = paste0(round(100*colMeans(is.na(df_eda)),1),"%"), 
+# Create table with prevalence of missing data - 36 weeks
+df_eda.36 <- df_eda %>%
+  filter(is.na(`Hospital Discharge Gestational Age`) | 
+           `Hospital Discharge Gestational Age` > 36) %>%
+  select(-c(`Weight (44 Weeks)`, 
+            `Ventilation Support Level (44 Weeks)`,
+            `FiO2 (44 Weeks)`,
+            `PIP (44 Weeks)`,
+            `PEEP (44 Weeks)`,
+            `Medication for Pulmonary Hypertension (44 Weeks)`))
+
+data.frame(variable = names(colMeans(is.na(df_eda.36))), 
+           perc_missing = paste0(round(100*colMeans(is.na(df_eda.36)),1),"%"), 
            row.names = NULL)  %>%
-  kableExtra::kbl(format = "latex", caption = "Prevalence of Missing Data", 
+  kableExtra::kbl(format = "latex", 
+                  caption = "Prevalence of Missing Data  at Birth, 36 Weeks, and Discharge", 
                   col.names = c("Variable", "Percent Missing"),
-                  booktabs = T) %>%
+                  booktabs = T,
+                  linesep = c(rep("", 11), "\\addlinespace", 
+                              rep("", 5), "\\addlinespace",
+                              rep("", 1))) %>%
+    kableExtra::kable_styling(latex_options = c("HOLD_position"), font_size = 8)
+
+# Create table with prevalence of missing data - 44 weeks
+df_eda.44 <- df_eda %>%
+  filter(`Hospital Discharge Gestational Age` > 44) %>%
+  select(c(`Weight (44 Weeks)`, 
+            `Ventilation Support Level (44 Weeks)`,
+            `FiO2 (44 Weeks)`,
+            `PIP (44 Weeks)`,
+            `PEEP (44 Weeks)`,
+            `Medication for Pulmonary Hypertension (44 Weeks)`))
+
+
+data.frame(variable = names(colMeans(is.na(df_eda.44))), 
+           perc_missing = paste0(round(100*colMeans(is.na(df_eda.44)),1),"%"), 
+           row.names = NULL)  %>%
+  kableExtra::kbl(format = "latex", 
+                  caption = "Prevalence of Missing Data  at 44 Weeks", 
+                  col.names = c("Variable", "Percent Missing"),
+                  booktabs = T,
+                  linesep = "") %>%
     kableExtra::kable_styling(latex_options = c("HOLD_position"), font_size = 8)
 
 ```
 
+### Center
+
+The data were collected from ten centers, some of which were referral hospitals with a higher proportion of sick infants. To account for the difference in center characteristics while retaining the transportability of the model, we included the centers as a random intercept in mixed-effects models rather than as a fixed effect. 
 
 ### Outcome
 
@@ -193,7 +230,7 @@ Multiple imputation was performed using the `mice` package in R. The MICE algori
 
 Multiple imputation requires an assumption that missingness is missing at random (MAR). In other words, missingness is related to other measured variables in the analysis model, but not to the underlying values of the incomplete variable. We imputed data for delivery method, prenatal corticosteroids, maternal chorioamnionitis, sex, SGA, weight at 36 and 44 weeks, ventilation support level, FiO2, PIP, PEEP, and medication for pulmonary hypertension. Much of the missingness in these variables appeared to be associated with center where the data were collected, rather than their underlying values. Further, there is no inherent reason to believe that the missing values were systematically higher or lower than observed values for any of the these variables, supporting the assumption that missingness is independent of the variable values. This aligns with the MAR assumption, indicating that the probability of missing data is related to other measured variables in the data. 
 
-The dataset was evaluated for outliers, though no infeasable values were detected. Continuous candidate variables (weight and respiratory measures) were normalized to maintain consistency in scale and allow for meaningful comparisons during analysis. 
+Three subjects were removed who were reported to have been discharged earlier than 36 weeks PMA. Continuous candidate variables (weight and respiratory measures) were normalized to maintain consistency in scale and allow for meaningful comparisons during analysis. 
 
 ```{r Multiple Imputation, warning = FALSE}
 ### Multiple Imputation
@@ -219,11 +256,13 @@ for (i in 1:m) {
   df_imp$center <- center_vec[train_index]
   
   train.36[[i]] <- df_imp %>%
+    filter(hosp_dc_ga > 36) %>%
     select(all_of(candidate_vars.36)) %>%
     mutate_at(c("bw", "weight_today.36", "inspired_oxygen.36", "p_delta.36",
                 "peep_cm_h2o_modified.36"), function(x) (x - mean(x))/sd(x))
   
   train.44[[i]] <- df_imp %>%
+    filter(hosp_dc_ga > 44) %>%
     select(all_of(candidate_vars.44)) %>%
     mutate_at(c("bw", "weight_today.44", "inspired_oxygen.44", "p_delta.44",
                 "peep_cm_h2o_modified.44"), function(x) (x - mean(x))/sd(x))
@@ -244,19 +283,19 @@ for (i in 1:m) {
 ## Regression Models
 
 
-After removing highly correlated variables and variables with a high prevalence of missing data, both the 36 and 44 week models had 14 candidate variables. This is still too high-dimensional for logistic regression, so we used further variable selection procedures. Two common options for optimized variable selection are best subset selection and lasso regression. 
+
+After removing highly correlated variables and variables with a high prevalence of missing data, both the 36 and 44 week models had 14 candidate variables. To avoid overfitting, we used further variable selection procedures. Two common options for optimized variable selection are best subset selection and lasso regression. 
 
 Lasso regression penalizes zero coefficients and shrinks the values of nonzero coefficients. Thus, lasso regression is a method of both variable selection and regularization. Best subsets, on the other hand, penalizes nonzero coefficients but does not shrink down the values of the coefficients. Both lasso and best subsets are optimized and find the best overall solution. However, best subsets can be computationally expensive as it is solving a non-convex problem. An alternative is forward stepwise selection, which starts with an empty model and iteratively adds one new variable that best improves the fit. This results in $p$ models, each with a different number of variables included in the model, the best of which can be chosen by cross-validated predicted error. 
 
-Since we planned to account for the various centers using a mixed-effects regression model, we chose a variable selection technique that did not shrink the coefficient values. This way, we could use variable selection to identify our subset of covariates, which could then be entered into a mixed-effects model (which assumes no regularization). Although forward stepwise selection is often used as a quicker alternative to best subset selection, recent packages in R have improved the computational feasability of running best subsets. We used the package `L0Learn` to fit best subset selection on our data. The best subsets optimization problem can be expressed as so: 
+Since we planned to account for the various centers using a mixed-effects regression model, we chose a variable selection technique that did not shrink the coefficient values. This way, we could use variable selection to identify our subset of covariates, which could then be entered into a mixed-effects model (which assumes no regularization). Although forward stepwise selection is often used as a quicker alternative to best subset selection, recent packages in R have improved the computational feasability of running best subsets. We used the package `L0Learn` to fit best subset selection on our data. 
 
-$$
-min \frac{1}{n} \sum_{i=1}^n (y_i - X_i\beta)^2 + \lambda\sum_{j=1}^p 1\{\beta_j \ne 0 \}
-$$
 
 ## Model Development 
 
-Thirty percent of the observations (N = 304) were set aside as a validation data set. The remaining observations (N = 692) were used to train the models. The training and validation sets each contained equal proportions of observations with a tracheostomy. We developed four types of models: (1) birth and 36-week data, including no interactions; (2) birth and 36-week data, including all interactions with ventilation support level; (3) birth and 44-week data, including no interactions; (4) birth and 44-week data, including all interactions with ventilation support level.
+Thirty percent of the observations (N = 304) were set aside as a validation data set. The remaining observations were used to train the models. The training and validation sets each contained equal proportions of observations with a tracheostomy. Missing data were imputed in both the training and validation sets using the multiple imputation model fit on the training data.
+
+We developed four types of models: (1) birth and 36-week data, including no interactions; (2) birth and 36-week data, including all interactions with ventilation support level; (3) birth and 44-week data, including no interactions; (4) birth and 44-week data, including all interactions with ventilation support level. Models 1 and 2 were trained on subjects that were discharged after 36 weeks PMA (N = 695) and Models 3 and 4 were trained on the subset of subjects that were discharged after 44 weeks PMA (N = 458). 
 
 A best subset regression algorithm was used to select the variables included in each of the four types of models. First, fivefold cross-validation was used to choose the optimal $\lambda$ value that minimized logistic loss. Best subset models using the optimal $\lambda$ values were then fit on each of the five imputed datasets. Any variables that were selected when using at four of the five imputed datasets were included in subsequent mixed-effects models. 
 
@@ -437,7 +476,7 @@ get_metrics <- function(model) {
 
 ## Study Population Characteristics 
 
-Prevalence of tracheostomy in the BPD Collaborative cohort was 15%. A summary of the candidate variables by tracheostomy status is reproted in Table 2. Based on Wilcoxson rank sum tests and Pearson's Chi-squared tests, the weight at birth, delivery type, prenatal corticosteroids, SGA, weight at 36 weeks, all respiratory support variables, and medication for pulmonary hypertension were significantly different between those who did have a tracheostomy and those who did not. Maternal chorioamnionitis, sex assigned at birth, and weight at 44 weeks did not differ significantly between those that did and did not have a tracheostomy in this datas et. 
+Prevalence of tracheostomy in the BPD Collaborative cohort was 15%. A summary of the candidate variables by tracheostomy status is reproted in Table 3. Based on Wilcoxson rank sum tests and Pearson's Chi-squared tests, the weight at birth, delivery type, prenatal corticosteroids, SGA, weight at 36 weeks, all respiratory support variables, and medication for pulmonary hypertension were significantly different between those who did have a tracheostomy and those who did not. Maternal chorioamnionitis, sex assigned at birth, and weight at 44 weeks did not differ significantly between those that did and did not have a tracheostomy in this datas et. 
 
 ```{r Table: Patient Characteristics}
 # Table with patient characteristics 
@@ -490,13 +529,16 @@ tbl_summary(df, by = Trach,
   add_p() %>%
    as_kable_extra(booktabs = TRUE, 
                   caption = "Candidate Variable Summary by Tracheostomy Status",
-                 longtable = TRUE) %>%
+                 longtable = TRUE,
+                 linesep = c(rep("", 5), "\\addlinespace", 
+                             rep("", 8), "\\addlinespace",
+                             rep("", 8))) %>%
   kableExtra::kable_styling(font_size = 8, 
                             latex_options = c("repeat_header", "HOLD_position"))
 
 ```
 
-Data were collected from ten hospital centers, with the number of observations per center ranging from just 1 patient to 630. Some centers were referral centers, which see a higher proportion of sicker patients. The proportions of each respiratory support level per center are reported in Table 3. Centers 1 and 12 had higher prevalences of subjects requiring invasive positive pressure and more subjects receiving a tracheostomy, suggesting that these may be referral centers. 
+Data were collected from ten hospital centers, with the number of observations per center ranging from just 1 patient to 630. Some centers were referral centers, which see a higher proportion of sicker patients. The proportions of each respiratory support level per center are reported in Table 4. Centers 1 and 12 had higher prevalences of subjects requiring invasive positive pressure and more subjects receiving a tracheostomy, suggesting that these may be referral centers. 
 
 This dataset has a hierarchical structure, as it was collected from separate centers with unique characteristics. Therefore, a mixed-effects model is appropriate as it allows for the incorporation of both fixed effects, capturing the trends in respiratory and other clinical parameters, and random effects, accommodating the variability and correlations within hospital centers. By incorporating the hospital centers as a random effect in the mixed-effects model, the analysis becomes more generalizable, enabling the model to be applied to centers outside our data.  
 
@@ -533,7 +575,7 @@ tbl_summary(df_center, include = c(ventilation_support_level.36,
 
 Using variables selected from best subset selection, four logistic mixed-effects models were fit on the training data using a random intercept for hospital center ID. 
 
-Model 1 (36 week, no interactions) included fixed effects for respiratory support level and normalized FiO2. Model 2 (36 week, interactions) included fixed effects for the prenatal corticosteroids indicator, respiratory support level at 36 weeks, normalized FiO2 at 36 weeks, and the interaction between respiratory support level and normalized FiO2. Model 3 (44 week, no interactions) included fixed effects for the prenatal corticosteroids indicator and respiratory support level at 44 weeks. Model 4 (44 week, interactions) included fixed effects for prenatal corticosteroids, respiratory support level at 44 weeks, an indicator for medication for pulmonary hypertension at 44 weeks, and the interaction between respiratory support level and medication for pulmonary hypertension. A summary of the model coefficients are reported in Table 4. 
+Model 1 (36 week, no interactions) included fixed effects for respiratory support level and normalized FiO2. Model 2 (36 week, interactions) included fixed effects for the prenatal corticosteroids indicator, respiratory support level at 36 weeks, normalized FiO2 at 36 weeks, and the interaction between respiratory support level and normalized FiO2. Model 3 (44 week, no interactions) included fixed effects for the prenatal corticosteroids indicator and respiratory support level at 44 weeks. Model 4 (44 week, interactions) included fixed effects for prenatal corticosteroids, respiratory support level at 44 weeks, an indicator for medication for pulmonary hypertension at 44 weeks, and the interaction between respiratory support level and medication for pulmonary hypertension. A summary of the model coefficients are reported in Table 5. 
 
 Prenatal corticosteroids, normalized FiO2, invasive positive pressure (IPPV) at 36 and 44 weeks, and medication for pulmonary hypertension (MedPH) at 44 weeks were associated with an increased risk of tracheostomy across all models. The interaction between IPPV at 44 weeks and MedPH at 44 weeks were associated with a decreased risk of tracheostomy, modulating each covariate's individual positive effect. Likewise, the individual effect of FiO2 was only negative when the interaction between respiratory support and FiO2 was included (Model 2). 
 
@@ -543,32 +585,35 @@ data.frame(covariates = c("Intercept", "Prenatal Corticosteroids", "NIPPV (36 Wk
                           "IPPV (36 Wks)", "FiO2 (36 Wks)", "NIPPV*FiO2 (36 Wks)",
                           "IPPV*FiO2 (36 Wks)", "NIPPV (44 Wks)", "IPPV (44 Wks)", 
                           "MedPH (44 Wks)", "NIPPV*MedPH (44 Wks)","IPPV*MedPH (44 Wks)"),
-                       model1 = kableExtra::linebreak(c("-2.34\n(SD 2.33)", 
-                                                        "-", "-0.28", "1.07", 
-                                                        "0.46", "-", "-",
-                                                        "-", "-", "-", "-",
-                                                        "-")),
-                       model2 = kableExtra::linebreak(c("-3.05\n(SD 2.34)", 
-                                                        "1.03", "-0.56", 
-                                                        "0.81", "-0.27", 
-                                                        "1.58", "0.67",
-                                                        "-", "-", "-", "-",
-                                                        "-")),
-                       model3 = kableExtra::linebreak(c("-4.34\n(SD 2.46)", 
-                                                        "1.31", "-", 
-                                                        "-", "-", 
-                                                        "-", "-",
-                                                        "0.58", "2.60", "-", "-",
-                                                        "-")),
-                       model4 = kableExtra::linebreak(c("-4.56\n(SD 2.19)", 
-                                                        "1.24", "-", 
-                                                        "-", "-", 
-                                                        "-", "-",
-                                                        "0.39", "2.91", "1.13", "0.35",
-                                                        "-1.47"))) %>%
+                       model1 = kableExtra::linebreak(c("-2.51\n(SD 2.16)", 
+                                                        "--", "-0.06", "1.25", 
+                                                        "0.50", "--", "--",
+                                                        "--", "--", "--", "--",
+                                                        "--")),
+                       model2 = kableExtra::linebreak(c("-3.08\n(SD 2.05)", 
+                                                        "0.97", "-0.47", 
+                                                        "0.83", "-0.36", 
+                                                        "1.74", "0.82",
+                                                        "--", "--", "--", "--",
+                                                        "--")),
+                       model3 = kableExtra::linebreak(c("-3.67\n(SD 2.25)", 
+                                                        "1.27", "--", 
+                                                        "--", "--", 
+                                                        "--", "--",
+                                                        "0.74", "2.93", "--", "--",
+                                                        "--")),
+                       model4 = kableExtra::linebreak(c("-3.86\n(SD 1.89)", 
+                                                        "1.19", "--", 
+                                                        "--", "--", 
+                                                        "--", "--",
+                                                        "0.34", "3.12", "1.11", "1.03",
+                                                        "-1.30"))) %>%
   kableExtra::kbl(format = "latex", caption = "Model Coefficients", 
                   col.names = c("Covariate", "Model 1", "Model 2", "Model 3", "Model 4"),
-                  booktabs = T, escape = "FALSE") %>%
+                  booktabs = T, escape = "FALSE",
+                  linesep = c(rep("\\addlinespace", 2), rep("", 2),
+                              "\\addlinespace", "", "\\addlinespace",
+                              rep("", 2), "\\addlinespace", "")) %>%
   kableExtra::footnote("MedPH: Medication for pulmonary hypertension.", general_title = "") %>%
   kableExtra::footnote("FiO2: Fraction of inspired oxygen needed.", general_title = "") %>%
   kableExtra::footnote("IPPV: Requires invasive positive pressure respiratory support.", general_title = "") %>%
@@ -595,19 +640,19 @@ cbind(centers,
                   col.names = c("Center ID", "Model 1", "Model 2", "Model 3", 
                                 "Model 4"),
                   caption = "Model Intercept by Center",
-                  booktabs = T, digits = 2) %>% 
+                  booktabs = T, digits = 2, linesep = "") %>% 
     kableExtra::kable_styling(latex_options = c("HOLD_position"),font_size = 8)
 
 ```
 
-Table 4 reports each model's intercept as its mean and standard deviation, whereas Table 5 reports the individual random intercepts for each hospital center ID. The intercepts for each center in the mixed-effects model represent the baseline level for the probability of tracheostomy (in the logit scale). Center 3 tended to have the lowest random intercept across all models, suggesting that, on average, this center had lower levels of the response variable compared to the overall average. This aligns with the patterns observed in Table 3, where Center 3 exhibited a low incidence of tracheostomy (1.8%). 
+Table 5 reports each model's intercept as its mean and standard deviation, whereas Table 6 reports the individual random intercepts for each hospital center ID. The intercepts for each center in the mixed-effects model represent the baseline level for the probability of tracheostomy (in the logit scale). Center 3 tended to have the lowest random intercept across all models, suggesting that, on average, this center had lower levels of the response variable compared to the overall average. This aligns with the patterns observed in Table 4, where Center 3 exhibited a low incidence of tracheostomy (1.8%). 
 
-Conversely, Center 21 had the highest random intercept across models, implying that this center tended to have higher levels of tracheostomy placement compared to the overall average. This finding is consistent with the data in Table 3 as well, where Center 21 had a 100% incidence of tracheostomy, albeit with a sample size of only one patient. 
+Conversely, Center 21 had the highest random intercept across models, implying that this center tended to have higher levels of tracheostomy placement compared to the overall average. This finding is consistent with the data in Table 4 as well, where Center 21 had a 100% incidence of tracheostomy, albeit with a sample size of only one patient. 
 
 ## Model Evaluation
 
 
-The optimal threshold, AUC, Brier score, precision, recall, and F1 score for each model is reported in Table 6. The optimal threshold represents the cut-off point that maximizes the distance to the identity line in the Receiver Operating Characteristic (ROC) curve. In other words, it is the threshold value that best balances sensitivity and specificity, optimizing the trade-off between correctly identifying positive cases and correctly identifying negative cases. The optimal ROC curves are visualized in Figure 2. 
+The optimal threshold, AUC, Brier score, precision, recall, and F1 score for each model are reported in Table 7. The optimal threshold represents the cut-off point that maximizes the distance to the identity line in the Receiver Operating Characteristic (ROC) curve. In other words, it is the threshold value that best balances sensitivity and specificity, optimizing the trade-off between correctly identifying positive cases and correctly identifying negative cases. The optimal ROC curves are visualized in Figure 2. 
 
 
 ```{r, message = FALSE}
@@ -657,18 +702,13 @@ ggroc(list(Model1 = roc.36, Model2 = roc_int.36, Model3 = roc.44, Model4 = roc_i
 
 ```
 
-In our models, the optimal thresholds ranged from 0.125 to 0.294. These values are lower than the conventional 0.50 threshold that may be intuitively expected for binary classifications. This may be due to class imbalance in the dataset, where only 15% of observations needed a tracheostomy. The prevalence of observations without tracheostomy could bias the model towards predicting the majority class, prompting the need for lower thresholds to effectively capture the minority class. 
+In our models, the optimal thresholds ranged from 0.126 to 0.406. These values are lower than the conventional 0.50 threshold that may be intuitively expected for binary classifications. This may be due to class imbalance in the dataset, where only 15% of observations needed a tracheostomy. The prevalence of observations without tracheostomy could bias the model towards predicting the majority class, prompting the need for lower thresholds to effectively capture the minority class. 
 
 Models 1 and 2 used 36-week data. Although Model 2 had a higher AUC and lower Brier score, it had a lower F1 score because it struggled with precision. Due to the class imbalance in the data, we used F1 score as the deciding metric to choose between these models. Thus, we chose Model 1 as the best model for 36-week data. Models 3 and 4 used 44-week data. Model 3 outperformed Model 4 using all metrics, with higher AUC and F1 scores and a lower Brier score. We chose Model 3 as the best model for 44-week data. 
 
 Based on these metrics using the validation data, both models that included only main effects with no interactions outperformed the more complex models that included interaction terms. This emphasizes the importance of model simplicity, as the inclusion of interaction terms in these cases did not contribute to model performance when fit on validation data. 
 
-Both 44-week models outperformed the 36-week models. We found that the 44-week variables were more highly associated with tracheostomy placement, so it makes sense that these are better predictors in the model. However, the 44-week model should still be interpreted with caution because it used a large proportion of imputed data which may not be as accurate as the 36-week data. 
-
-\pagebreak
-
-
-
+Both 44-week models outperformed the 36-week models. We found that the 44-week variables were more highly associated with tracheostomy placement, so it makes sense that these are better predictors in the model. 
 
 ## Model Coefficients and Interpretation
 
@@ -679,10 +719,10 @@ The final 36-week model can be expressed as so:
 # Table with final 36-week coeffients and ORs
 data.frame(covariates = c("Intercept", "NIPPV (36 Wks)", "IPPV (36 Wks)",
                           "FiO2 (36 Wks)"),
-           coefficients = c("-2.34 (SD 2.33)", "-0.28", "1.07", "0.46"),
-           oddsratio = c("", "0.76 (0.52, 1.10)", "2.92 (2.05, 4.16)",
-                         "1.58 (1.44, 1.73)"),
-           p_value = c("",  "0.145", "<0.001", "<0.001")) %>%
+           coefficients = c("-2.51 (SD 2.16)", "-0.06", "1.25", "0.50"),
+           oddsratio = c("", "0.94 (0.64, 1.39)", "3.49 (2.42, 5.04)",
+                         "1.65 (1.50, 1.80)"),
+           p_value = c("",  "0.781", "<0.001", "<0.001")) %>%
   kableExtra::kbl(format = "latex", caption = "Coefficients and Odds Ratios for Selected 36-Week Model", 
                   col.names = c("Covariate", "Coefficient", "Odds Ratio (95% CI)", "p-value"),
                   booktabs = T) %>%
@@ -690,9 +730,9 @@ data.frame(covariates = c("Intercept", "NIPPV (36 Wks)", "IPPV (36 Wks)",
 
 ```
 
-Having a respiratory support level of NIPPV at 36 weeks did not have a significant effect on tracheostomy probability in comparison to needing no respiratory support. The odds ratio for IPPV at 36 weeks versus no respiratory support was 2.92, indicating that those needed IPPV support had 2.92 times higher odds of tracheostomy than those that didn't need respiratory support at 36 weeks. Additionally, a one-standard deviation increase in  FiO2 was associated with 1.58 times higher odds of tracheostomy occurring. In the observed data, FiO2 had a mean of 0.34 and a standard deviation of 0.15. . 
+Having a respiratory support level of NIPPV at 36 weeks did not have a significant effect on tracheostomy probability in comparison to needing no respiratory support. The odds ratio for IPPV at 36 weeks versus no respiratory support was 3.49, indicating that those needed IPPV support had 3.49 times higher odds of tracheostomy than those that didn't need respiratory support at 36 weeks. Additionally, a one-standard deviation increase in  FiO2 was associated with 1.65 times higher odds of tracheostomy occurring. In the observed data, FiO2 had a mean of 0.34 and a standard deviation of 0.15.
 
-As an example, a patient from the average center with no respiratory support and  inspired oxygen fraction of 0.34 (average) would have a risk of tracheostomy of $e^{-2.34}/(1+e^{-2.34}) = 0.088$. A patient from the average center requiring IPPV support and an inspired oxygen fraction of 0.49 (average + 1SD) would have a tracheostomy risk of $e^{-2.34 + 1.07 + 0.46}/(1+e^{-2.34 + 1.07 + 0.46}) = 0.308$, which using the optimal threshold of 0.186 would classify them as needing a tracheostomy. 
+As an example, a patient from the average center with no respiratory support and  inspired oxygen fraction of 0.34 (average) would have a risk of tracheostomy of $e^{-2.51}/(1+e^{-2.51}) = 0.075$. A patient from the average center requiring IPPV support and an inspired oxygen fraction of 0.49 (average + 1SD) would have a tracheostomy risk of $e^{-2.51 + 1.25 + 0.50}/(1+e^{-2.51 + 1.25 + 0.50}) = 0.319$, which using the optimal threshold of 0.162 would classify them as needing a tracheostomy. 
 
 
 The final 44-week model can be expressed as so: 
@@ -700,8 +740,8 @@ The final 44-week model can be expressed as so:
 ```{r}
 # Table with final 44-week coeffients and ORs
 data.frame(covariates = c("Intercept", "Prenatal Corticosteroids", "NIPPV (36 Wks)", "IPPV (36 Wks)"),
-           coefficients = c("-4.34 (SD 2.46)", "1.31", "0.58", "2.60"),
-           oddsratio = c("", "3.72 (3.03, 4.57)", "1.78 (1.53, 2.08)", "13.46 (11.74, 15.43)"),
+           coefficients = c("-3.67 (SD 2.25)", "1.27", "0.74", "2.93"),
+           oddsratio = c("", "3.56 (2.30, 5.55)", "2.09 (1.50, 2.91)", "18.72 (13.80, 25.39)"),
            p_value = c("", "<0.001", "<0.001", "<0.001")) %>%
   kableExtra::kbl(format = "latex", caption = "Coefficients and Odds Ratios for Selected 44-Week Model", 
                   col.names = c("Covariate", "Coefficient", "Odds Ratio (95% CI)", "p-value"),
@@ -711,10 +751,10 @@ data.frame(covariates = c("Intercept", "Prenatal Corticosteroids", "NIPPV (36 Wk
 ```
 
 
-All effects in this model were statistically significant. Under this model, the odds of tracheostomy for those who received prenatal corticosteroids were 3.72 times higher than those who didn't receive prenatal corticosteroids. The odds of tracheostomy for patients needing NIPPV support was 1.78 times higher than those needing no respiratory support. The odds of tracheostomy for patients needing IPPV support was 13.46 times higher than those needing no respiratory support. 
+All effects in this model were statistically significant. Under this model, the odds of tracheostomy for those who received prenatal corticosteroids were 3.56 times higher than those who didn't receive prenatal corticosteroids. The odds of tracheostomy for patients needing NIPPV support was 2.09 times higher than those needing no respiratory support. The odds of tracheostomy for patients needing IPPV support was 18.72 times higher than those needing no respiratory support. 
 
 
-Both the 36 and 44 week models selected respiratory support level as an important predictor. While the 36-week model used fraction of inspired oxygen as an additional predictor, the 44-week model used prenatal corticosteroids as a predictor. The highest odds ratio was observed for IPPV vs. no respiratory support at 46 weeks, suggesting that this is the most influencial variable in whether the patient will need a tracheostomy. 
+Both the 36 and 44 week models selected respiratory support level as an important predictor. While the 36-week model used fraction of inspired oxygen as an additional predictor, the 44-week model used prenatal corticosteroids as a predictor. The highest odds ratio was observed for IPPV vs. no respiratory support at 44 weeks, suggesting that this is the most influencial variable in whether the patient will need a tracheostomy. 
 
 # Discussion 
 
@@ -728,9 +768,11 @@ While this study contributes insights into which variables predict the need for 
 
 Second, the relatively small sample size, especially considering class imbalance and the hierarchical structure of the data collected from different hospital centers, could limit the generalizability of the findings. While mixed-effects models account for this variability, larger and more diverse datasets would strengthen the external validity of the predictive models. 
 
-Third, the retrospective nature of the datset restricts the establishment of causal relationships. The absense of detailed comorbidity data introduces potential confounding factors that could influence the outcomes. Prospective studies with comprehensive data collection, including comorbidities and long-term follow-up, would provide a more nuanced understanding of the factors influencing tracheostomy outcomes in neonates with sBPD.
+Third, although the training/validation data split was balanced regarding the proportion of tracheostomy placements, the split was not balanced in regard to centers. Due to the different characteristics across the centers, balancing the data split would reduce bias due to some centers being randomly overrepresented in the validation data. 
 
-Fourth, the reliance on imputed data, especially for the 44-week variables, introduces another layer of uncertainty. While multiple imputation was employed to mitigate missing data, the accuracy of predictions based on imputed values may vary. Future research should aim to collect complete and accurate data at both timepoints to enhance the reliability of the models. 
+Fourth, the retrospective nature of the dataset restricts the establishment of causal relationships. The absence of detailed comorbidity data introduces potential confounding factors that could influence the outcomes. Prospective studies with comprehensive data collection, including comorbidities and long-term follow-up, would provide a more nuanced understanding of the factors influencing tracheostomy outcomes in neonates with sBPD.
+
+Finally, the reliance on imputed data, especially for the 44-week variables, introduces another layer of uncertainty. While multiple imputation was employed to mitigate missing data, the accuracy of predictions based on imputed values may vary. Future research should aim to collect complete and accurate data at both timepoints to enhance the reliability of the models. Further, future studies should evaluate model performance for different populations to assess model bias across various demographics. 
 
 Despite these limitations, the current study lays the groundwork for further investigations into the predictive factors of tracheostomy in neonates with BPD. Future research should focus on overcoming these limitations, integrate the 36-week and 44-week variables into a single model, and validate the models in larger and more diverse cohorts to ensure their transportability across varied settings. 
 
