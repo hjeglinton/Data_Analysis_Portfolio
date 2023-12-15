@@ -6,12 +6,13 @@ This report explores the relationship between prenatal and postpartum smoke expo
 
 This report's exploratory data analysis revealed that there wasn't much of an association between smoking during pregnancy and the measured self-regulation behaviors, while there was a stronger association between smoking during pregnancy and the measured externalizing behaviors, particularly the incidence of ADHD. These associations were stronger for childhood smoke exposure than prenatal smoke exposure.
 
-![](EDA_results.png)
+![](images/EDA_results.png)
 
 ## Files
-
+### R
 `preprocessing.R`: Contains the preprocessing steps necessary for exploratory data analysis. Specifically, this script filters for data collected at baseline and it reduces the number of variables from 1,282 to 78 by dropping or summarizing variables. 
 
+### report
 `project1_EDA.Rmd`: The Rmarkdown version of the Exploratory Data Analysis report, which includes both written text interpretations and raw code used in the analysis. 
 
 `project1_EDA.pdf`: The PDF version of the Exploratory Data Analysis report, which includes both written text interpretations and a Code Applendix with the raw code used in the analysis. 
