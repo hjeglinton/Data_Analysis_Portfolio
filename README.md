@@ -2,7 +2,8 @@
 
 This repository showcases three distinct data analysis projects, showcasing my skills in exploratory data analysis, model selection, and designing simulation studies. 
 
-### Project 1: Exploratory Data Analysis on Prenatal/Childhood Smoke Exposure and Adolescent Behavior
+## Project 1
+### Exploratory Data Analysis on Prenatal/Childhood Smoke Exposure and Adolescent Behavior
 
 **Background**:  The prenatal and postnatal periods represent critical stages of human development, during which environmental factors can shape the child's long-term health and well-being [1]. Among many factors that influence fetal and neonatal development, maternal smoking has emerged as a concern associated with a variety of adverse outcomes, not only affecting the immediate health of the newborn but potentially extending into adolescence and beyond. 
 
@@ -10,8 +11,8 @@ This repository showcases three distinct data analysis projects, showcasing my s
 
 **Results**: This report's exploratory data analysis revealed that there wasn't much of an association between smoking during pregnancy and the measured self-regulation behaviors, while there was a stronger association between smoking during pregnancy and the measured externalizing behaviors, particularly the incidence of ADHD. These associations were stronger for childhood smoke exposure than prenatal smoke exposure. The full report can be found [here](<Exploratory Data Analysis/report/EDA_report.pdf>).
 
-
-### Project 2: Model Selection for Predicting Tracheostomy Placement in Infants with sBPD
+## Project 2
+### Model Selection for Predicting Tracheostomy Placement in Infants with sBPD
 
 **Background**: Bronchopulmonary dysplasia (BPD) poses a significant challenge in the care of preterm infants, with severe cases often needing tracheostomy. Clinicians grapple with the challenge of determining the optimal timing for tracheostomy placement in neonates with sBPD. This study aims to develop models for predicting tracheostomy in neonates with severe BPD using respiratory parameters at 36 and 44 weeks post-menstrual age (PMA).
 
@@ -19,7 +20,8 @@ This repository showcases three distinct data analysis projects, showcasing my s
 
 **Results**: Respiratory support level, fraction of inspired oxygen required, prenatal corticosteroids, and medication of pulmonary hypertension emerged as significant predictors of tracheostomy. The 44-week model outperformed the 36-week model, showing the importance of respiratory parameters closer to discharge. The full report can be found [here](<Model Selection/report/model_selection_report.pdf>). 
 
-### Project 3: Simulation for Transportability Analysis
+## Project 3
+### Evaluating the Performance of Simulated Datasets in Transportability Analysis
 
 **Background**: Risk prediction models, such as the Framingham ATP-III model for cardiovascular disease, are crucial for clinical decision-making but may face challenges when applied to populations with different characteristics. Transportability analysis techniques can adjust model performance for these differences, but they require individual-level data from the target population, which may not always be available. Simulating the target population data from summary statistics may be one way to overcome this challenge. Our study evaluated how well simulated data can replicate individual-level target population data in the context of transportability analysis, specifically investigating how important correlation assumptions are when simulating the data.
 
