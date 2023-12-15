@@ -94,9 +94,79 @@ for (i in 1:nrow(full_grid)) {
   
 }
 
+
+
+
 sds <- full_grid %>%
   group_by(rho, gamma) %>%
   summarize(sd_m = sd(brier_male), sd_f = sd(brier_female))
 
 # Save results
 write.csv(full_grid, "simulation_results.csv", row.names = FALSE)
+
+
+
+#### SECOND ROUND 
+# Set seed and n_sim
+set.seed(1)
+n_sim = 100
+
+rho_seq <- c(0.14, 0.12, 0.18, 0.21)
+gamma_seq <- c(0.14, 0.20, 0.25, 0.30)
+full_grid <- data.frame(rho = rho_seq, gamma = gamma_seq, 
+                         brier_male = rep(NA, n_sim*4))
+full_grid$brier_female <- NA
+full_grid$auc_male <- NA
+full_grid$auc_female <- NA
+
+# Run simulations 
+for (i in 1:nrow(full_grid)) {
+  
+  if (i %% 100 == 0) {
+    print(i)
+  }
+  
+  X_men <- simulate_covariates(mean_men, sd_men, 
+                               rho = full_grid$rho[i], 
+                               gamma = full_grid$gamma[i])
+  
+  X_women <- simulate_covariates(mean_women, sd_women, 
+                                 rho = full_grid$rho[i], 
+                                 gamma = full_grid$gamma[i])
+  
+  
+  combined_men <- bind_rows(framingham_df_men, X_men) %>%
+    dplyr::select(TOTCHOL, AGE, CURSMOKE, DIABETES, 
+                  BPMEDS, HDLC, SYSBP, CVD, S, SEX)
+  
+  combined_women <- bind_rows(framingham_df_women, X_women) %>%
+    dplyr::select(TOTCHOL, AGE, CURSMOKE, DIABETES, 
+                  BPMEDS, HDLC, SYSBP, CVD, S, SEX)
+  
+  
+  full_grid$brier_male[i] <- estimate_brier(model = mod_men,
+                                            combined_df = combined_men,
+                                            observed = framingham_df_men$CVD,
+                                            predicted = predict(mod_men, type = "response"),
+                                            n_target = nrow(X_men))
+  
+  full_grid$brier_female[i] <- estimate_brier(model = mod_women,
+                                              combined_df = combined_women,
+                                              observed = framingham_df_women$CVD,
+                                              predicted = predict(mod_women, type = "response"),
+                                              n_target = nrow(X_women))
+  
+  full_grid$auc_male[i] <- estimate_auc(combined_df = combined_men,
+                                        observed = framingham_df_men$CVD,
+                                        predicted = predict(mod_men, type = "response"))
+  
+  full_grid$auc_female[i] <- estimate_auc(combined_df = combined_women,
+                                          observed = framingham_df_women$CVD,
+                                          predicted = predict(mod_women, type = "response"))
+  
+  
+  
+}
+
+# Save results
+write.csv(full_grid, "simulation_results_with_assumptions.csv", row.names = FALSE)

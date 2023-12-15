@@ -128,3 +128,23 @@ relative_bias <- function(estimate_vec, estimand) {
 relative_bias_se <- function(n_sim, estimate_vec, estimand) {
   return(sqrt(1/(n_sim*(n_sim-1)) * sum(((estimate_vec - estimand)^2)/estimand)))
 }
+
+
+# Approximate gamma from observed data 
+get_obs_gamma <- function(bp1, bp0) {
+  
+  score = 0
+  total = 0
+  
+  for (i in 1:length(bp1)) {
+    for (j in 1:length(bp0)) {
+      total = total + 1
+      if (bp1[i] > bp0[j]) {
+        score = score + 1
+      }
+    }
+  }
+  
+  return((score/total - 0.5)*2)
+  
+}
