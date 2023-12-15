@@ -50,6 +50,8 @@ rsconnect/
 */README.html
 */.DS_Store
 */ignore/*
-*/project1.csv
-*/project2.csv
-*/model_selection_report.log
+*.csv
+*.log
+*.xlsx
+*.DS_Store
+
