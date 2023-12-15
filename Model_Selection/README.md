@@ -1,10 +1,19 @@
 # Predicting Tracheostomy in Infants with sBPD
 
-Bronchopulmonary dysplasia (BPD) poses a significant challenge in the care of preterm infants, with severe cases often needing tracheostomy. This project aims to develop models for predicting tracheostomy in neonates with severe BPD using respiratory parameters at 36 and 44 weeks post-menstrual age (PMA). The data were accessed from the BPD Collaborative Registry, which included a sample of 996 infants with severe BPD. 
 
-Clinicians grapple with the challenge of determining the optimal timing for tracheostomy placement in neonates with sBPD. While early intervention helps the patient and parents adjust to tracheostomy well before discharge, leading to better outcomes and improved growth, clinicians do not want to introduce the risks associated with tracheostomy to patients who will not need it. Existing attempts to predict the need for tracheostomy have predominately relied on baseline demographics and clinical diagnosis and have not provided prediction at different postmenstrual ages or used detailed respiratory parameters.
+### Background
+Bronchopulmonary dysplasia (BPD) poses a significant challenge in the care of preterm infants, with severe cases often needing tracheostomy. Clinicians grapple with the challenge of determining the optimal timing for tracheostomy placement in neonates with sBPD. This study aims to develop models for predicting tracheostomy in neonates with severe BPD using respiratory parameters at 36 and 44 weeks post-menstrual age (PMA).
 
-This research seeks to address this gap by leveraging clinical data collected at two timepoints -- 36 and 44 weeks PMA -- to develop predictive models for tracheostomy outcomes in neonates with BPD. 36 weeks marks a crucial junction in the neonatal period, as it is the point at which preterm born infants are considered to have reached their term-equivalent age. The 44-week timepoint provides insights closer to anticipated discharge. The implications of such a model are substantial, not only for guiding clinicians through informed decision-making but also for refining the ongoing debate surrounding tracheostomy placement in neonates with severe bronchopulmonary dysplasia.
+### Methods
+A multicenter, retrospective case-control study was conducted, involving 996 infants born at less than 32 weeks PMA. Clinical data were collected at birth, 36 weeks PMA, 44 weeks PMA, and at discharge. Multiple imputation addressed missing data and a best subsets algorithm was used for variable selection. Four logistic mixed-effects models were developed, with 30% of observations reserved for validation. Models were evaluated using area under the receiver operating characteristic curve (AUC), Brier score, precision, recall, and F1 score.
+
+### Results
+Respiratory support level, fraction of inspired oxygen required, prenatal corticosteroids, and medication of pulmonary hypertension emerged as significant predictors of tracheostomy. The 44-week model outperformed the 36-week model, showing the importance of respiratory parameters closer to discharge. The full report can be found [here](report/model_selection_report.pdf). 
+
+![](images/coefficients.png)
+
+![](images/evaluation.png)
+
 
 
 ## Files
