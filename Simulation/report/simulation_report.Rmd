@@ -3,8 +3,8 @@ title: "Evaluating the Performance of Simulated Datasets in Transportability Ana
 author: "Hannah Eglinton"
 date: "December 2023"
 output: pdf_document
-bibliography: references.bib
-csl: biomed-central.csl
+bibliography: ../references/references.bib
+csl: ../references/biomed-central.csl
 ---
 
 ```{r setup, include=FALSE}
@@ -17,7 +17,7 @@ library(kableExtra)
 library(mice)
 library(gridExtra)
 
-source("functions.R")
+source("../R/functions.R")
 ```
 
 
