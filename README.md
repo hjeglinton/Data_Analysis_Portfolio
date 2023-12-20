@@ -28,3 +28,9 @@ This repository showcases three distinct data analysis projects, showcasing my s
 **Methods**: We fit a CVD risk model on Framingham Heart Study data and then conducted transportability analyses using a target population from the National Health and Nutrition Examination Survey (NHANES), a nationally representative dataset that does not contain long-term outcome data on CVD. We assessed the bias of Brier score and AUC estimates derived through transportability analysis using simulated data in comparison to those derived using the individual-level NHANES data. Simulated target population data were generated using NHANES summary statistics and a variety of correlation parameters. 
 
 **Results**: Low relative biases were observed, suggesting that using simulated data to conduct transportability analysis is a valid way to estimate Brier scores and AUC in a target population when individual-level data is not available. The simulations that assumed no associations between simulated covariates or that used the associations observed in the source population did not result in substantially lowered performance than simulations using the precise associations observed in the target population. More details can be found in the [report](Simulation/report/simulation_report.pdf) or the [poster](Simulation/report/simulation_poster.pdf). 
+
+## Contact
+**Hannah Eglinton** \
+hannah_eglinton@brown.edu \
+[LinkedIn](https://www.linkedin.com/in/hannah-eglinton/) \
+[Github](https://github.com/hjeglinton)
